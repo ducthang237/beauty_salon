@@ -8,7 +8,9 @@ use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use InvalidArgumentException;
+use PDOException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Illuminate\Support\Facades\DB;
 
 class BookingService
 {
@@ -38,7 +40,6 @@ class BookingService
                 'required',
                 'date'
             ],
-            'service' => 'required',
             'status' => 'in:1,2,3',  // 1: waiting, 2: done, 3: canceled
             'salon_id' => [
                 'required',
@@ -59,6 +60,12 @@ class BookingService
                         $fail('The '.$attribute.' is invalid.');
                     }
                 },
+            ],
+            'service_id' => [
+                'required',
+                function ($attribute, $value, $fail) use ($data) {
+
+                },
             ]
         ]);
 
@@ -68,7 +75,15 @@ class BookingService
 
         $data['customer_id'] = Auth::user()->id;
 
-        return $this->bookingRepo->create($data);
+        DB::beginTransaction();
+        try {
+            $booking = $this->bookingRepo->create($data);
+            $booking->services()->attach($data['service_id']);
+            DB::commit();
+            return $booking;
+        } catch (PDOException $e) {
+            DB::rollback();
+        }
     }
 
     public function update($id, $data)
@@ -83,7 +98,6 @@ class BookingService
                 'required',
                 'date'
             ],
-            'service' => 'required',
             'status' => 'in:1,2,3',  // 1: waiting, 2: done, 3: canceled
             'salon_id' => [
                 'required',
@@ -111,7 +125,15 @@ class BookingService
             throw new InvalidArgumentException($validator->errors());
         }
 
-        return $this->bookingRepo->update($id, $data);
+        DB::beginTransaction();
+        try {
+            $newBooking = $this->bookingRepo->update($id, $data);
+            $newBooking->services()->attach($data['service_id']);
+            DB::commit();
+            return $newBooking;
+        } catch (PDOException $e) {
+            DB::rollback();
+        }
     }
 
     public function delete($id)

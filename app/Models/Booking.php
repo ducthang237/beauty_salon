@@ -11,7 +11,7 @@ class Booking extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        'booking_date', 'service', 'status', 'salon_id', 'customer_id', 'technical_id'
+        'booking_date', 'status', 'salon_id', 'customer_id', 'technical_id'
     ];
 
     public function salon()
@@ -27,5 +27,10 @@ class Booking extends Model
     public function technical()
     {
         return $this->belongsTo(Technical::class);
+    }
+
+    public function services()
+    {
+        return $this->belongsToMany(Service::class, 'booking_services', 'booking_id', 'service_id');
     }
 }
